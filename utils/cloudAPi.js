@@ -1,6 +1,9 @@
 
 import pool from "../db/index.js"
-let API = 'http://192.1.81.65:8080'
+import dotenv from "dotenv"
+
+dotenv.config();
+let API = process.env.CLOUD
 
 async function syncMachines(data) {
   try {
