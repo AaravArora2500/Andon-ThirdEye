@@ -7,17 +7,17 @@ let API = process.env.CLOUD
 
 async function syncMachines(data) {
   try {
-    // 1. Fetch ALL machines for this plant
+    // Fetch ALL machines for this plant
     // const { data } = await axios.get(`${CLOUD_API}?plantId=${plantId}`);
     // if (!Array.isArray(data) || data.length === 0) {
     //   throw new Error(`No machines found for plant ${plantId}`);
     // }
 
-    // 2. Clear the local table ONCE
+    //Clear the local table ONCE
    console.log(data);
     await pool.query(`TRUNCATE TABLE machine RESTART IDENTITY;`);
    
-    // 3. Insert all machines
+    // Insert all machines
     for (const machine of data) {
       let cycleTime = machine?.intermittentStrokes ? machine?.intermittentStrokes : machine?.cycleTime;
       cycleTime = cycleTime || 0;
