@@ -1,0 +1,384 @@
+[
+    {
+        "id": "b8fda6f6b4bd90a2",
+        "type": "tab",
+        "label": "Flow 4",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "ec8eb4b84f8ad209",
+        "type": "MC Read",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "UNDER_BODY_OP_60_LH_SHIFT_ALL_ICE",
+        "topic": "",
+        "connection": "15e1a4947a7c4637",
+        "address": "D5346",
+        "addressType": "str",
+        "outputFormat": 0,
+        "errorHandling": "throw",
+        "outputs": 1,
+        "x": 440,
+        "y": 200,
+        "wires": [
+            [
+                "66783ee3d7b79d6b"
+            ]
+        ]
+    },
+    {
+        "id": "fd056285571f41e7",
+        "type": "MC Read",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "UNDER_BODY_OP_60_LH_BIT_ICE",
+        "topic": "",
+        "connection": "15e1a4947a7c4637",
+        "address": "L81",
+        "addressType": "str",
+        "outputFormat": 0,
+        "errorHandling": "throw",
+        "outputs": 1,
+        "x": 410,
+        "y": 240,
+        "wires": [
+            [
+                "66783ee3d7b79d6b"
+            ]
+        ]
+    },
+    {
+        "id": "a74ca1053ba5a952",
+        "type": "MC Read",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "UNDER_BODY_OP_60_LH_SHIFT_ALL_EV",
+        "topic": "",
+        "connection": "15e1a4947a7c4637",
+        "address": "D6346",
+        "addressType": "str",
+        "outputFormat": 0,
+        "errorHandling": "throw",
+        "outputs": 1,
+        "x": 430,
+        "y": 280,
+        "wires": [
+            [
+                "66783ee3d7b79d6b"
+            ]
+        ]
+    },
+    {
+        "id": "987163aee3012fe3",
+        "type": "MC Read",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "UNDER_BODY_OP_60_LH_BIT_EV",
+        "topic": "",
+        "connection": "15e1a4947a7c4637",
+        "address": "L82",
+        "addressType": "str",
+        "outputFormat": 0,
+        "errorHandling": "throw",
+        "outputs": 1,
+        "x": 410,
+        "y": 320,
+        "wires": [
+            [
+                "66783ee3d7b79d6b"
+            ]
+        ]
+    },
+    {
+        "id": "5e8ef9f492f09f1f",
+        "type": "inject",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 90,
+        "y": 260,
+        "wires": [
+            [
+                "ec8eb4b84f8ad209",
+                "fd056285571f41e7",
+                "a74ca1053ba5a952",
+                "987163aee3012fe3"
+            ]
+        ]
+    },
+    {
+        "id": "66783ee3d7b79d6b",
+        "type": "join",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "",
+        "mode": "custom",
+        "build": "merged",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": false,
+        "accumulate": true,
+        "timeout": "",
+        "count": "4",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 730,
+        "y": 260,
+        "wires": [
+            [
+                "d0b1e77409be8a97",
+                "ce175a5f33a75fac",
+                "0a853cddd705cfe7"
+            ]
+        ]
+    },
+    {
+        "id": "d0b1e77409be8a97",
+        "type": "function",
+        "z": "b8fda6f6b4bd90a2",
+        "d": true,
+        "name": "function 26",
+        "func": "let variant;\nlet production;\nlet lineId;\n\n// Extract input flags\nconst l81 = msg.payload[\"L81\"];\nconst l82 = msg.payload[\"L82\"];\n\n// Match conditions\nif (l81 === true && l82 === false) {\n    variant = \"ICE\";\n    production = Number(msg.payload[\"D5346\"]);\n    lineId = \"UNDER_BODY_OP_60_LH\";\n} else if (l82 === true && l81 === false) {\n    variant = \"EV\";\n    production = Number(msg.payload[\"D6346\"]);\n    lineId = \"UNDER_BODY_OP_60_LH\";\n} else {\n    node.warn(\"No valid variant condition matched.\");\n    return null;\n}\n\n// Validate production number\nif (isNaN(production)) {\n    node.warn(\"Invalid production value: \" + production);\n    return null;\n}\n\n// Construct final payload\nmsg.payload = {\n    companyId: \"JBMGroup\",\n    plantId: \"1731\",\n    machineId: \"Front_floor_new \",\n    lineId: lineId,\n    part_name: \"ASSY_FRONT_UNDERBODY_FRAME\",\n    shift: \"ALL\",\n    variant: variant,\n    time: new Date().toISOString(),\n    totalStrokeCounter: production\n};\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "14418e6803046c3e",
+        "type": "delay",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "",
+        "pauseType": "queue",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1190,
+        "y": 260,
+        "wires": [
+            [
+                "dab3b68db9045eaa"
+            ]
+        ]
+    },
+    {
+        "id": "ce175a5f33a75fac",
+        "type": "function",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "function 27",
+        "func": "let variant;\nlet production;\nlet lineId;\n\n// --- Step 1: Extract input flags safely\nconst l81 = msg.payload?.[\"L81\"];\nconst l82 = msg.payload?.[\"L82\"];\n\n// --- Step 2: Match conditions for variant, line, and production\nif (l81 === true && l82 === false) {\n    variant = \"ICE\";\n    production = Number(msg.payload[\"D5346\"]);\n    lineId = \"UNDER_BODY_OP_60_LH\";\n} else if (l82 === true && l81 === false) {\n    variant = \"EV\";\n    production = Number(msg.payload[\"D6346\"]);\n    lineId = \"UNDER_BODY_OP_60_LH\";\n} else {\n    node.warn(\"❌ No valid variant condition matched. L81: \" + l81 + \", L82: \" + l82);\n    return null;\n}\n\n// --- Step 3: Validate production number\nif (!Number.isFinite(production)) {\n    node.warn(\"❌ Invalid production value: \" + production);\n    return null;\n}\n\n// --- Step 4: Get base UTC time\nconst baseTime = msg.payload.time ? new Date(msg.payload.time) : new Date();\nif (isNaN(baseTime.getTime())) {\n    node.warn(\"❌ Invalid base time: \" + msg.payload.time);\n    return null;\n}\n\n// --- Step 5: Convert to IST using Intl.DateTimeFormat\nconst istParts = Object.fromEntries(\n    new Intl.DateTimeFormat('en-GB', {\n        timeZone: 'Asia/Kolkata',\n        year: 'numeric', month: '2-digit', day: '2-digit',\n        hour: '2-digit', minute: '2-digit', second: '2-digit',\n        hour12: false\n    }).formatToParts(baseTime).map(p => [p.type, p.value])\n);\n\nconst hoursIST = Number(istParts.hour);\nconst minutesIST = Number(istParts.minute);\n\n// --- Step 6: Determine Shift\nlet shift;\nif (hoursIST >= 7 && (hoursIST < 15 || (hoursIST === 15 && minutesIST < 30))) {\n    shift = \"A\";  // 07:00 - 15:29\n} else if ((hoursIST === 15 && minutesIST >= 30) || (hoursIST > 15 && hoursIST <= 23)) {\n    shift = \"B\";  // 15:30 - 23:59\n} else {\n    shift = \"C\";  // 00:00 - 06:59\n}\n\n// --- Step 7: Format IST as \"YYYY-MM-DD HH:mm:ss.SSS\"\nconst milliseconds = String(baseTime.getMilliseconds()).padStart(3, '0');\nconst istFormatted = `${istParts.year}-${istParts.month}-${istParts.day} ${istParts.hour}:${istParts.minute}:${istParts.second}.${milliseconds}`;\n\n// --- Step 8: Final Payload\nmsg.payload = {\n    companyId: \"JBMGroup\",\n    plantId: \"1731\",\n    machineId: \"Front_floor_new\",\n    lineId: lineId,\n    part_name: \"ASSY_FRONT_UNDERBODY_FRAME\",\n    shift: shift,\n    variant: variant,\n    time: istFormatted,  // IST formatted timestamp\n    totalStrokeCounter: production\n};\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 780,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3c76146e380bed15",
+        "type": "debug",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "debug 5",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1420,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "3fc46a24fdecd8df",
+        "type": "debug",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "debug 6",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1140,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "5fefc6c89b2a2314",
+        "type": "function",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "function 28",
+        "func": "let variant;\nlet production;\nlet lineId;\n\n// --- Step 1: Extract input flags safely\nconst l81 = msg.payload?.[\"L81\"];\nconst l82 = msg.payload?.[\"L82\"];\n\n// --- Step 2: Match conditions for variant, line, and production\nif (l81 === true && l82 === false) {\n    variant = \"ICE\";\n    production = Number(msg.payload[\"D5346\"]);\n    lineId = \"UNDER_BODY_OP_60_LH\";\n} else if (l82 === true && l81 === false) {\n    variant = \"EV\";\n    production = Number(msg.payload[\"D6346\"]);\n    lineId = \"UNDER_BODY_OP_60_LH\";\n} else {\n    node.warn(\"❌ No valid variant condition matched. L81: \" + l81 + \", L82: \" + l82);\n    return null;\n}\n\n// --- Step 3: Validate production number\nif (!Number.isFinite(production)) {\n    node.warn(\"❌ Invalid production value: \" + production);\n    return null;\n}\n\n// --- Step 4: Get base UTC time\nconst baseTime = msg.payload.time ? new Date(msg.payload.time) : new Date();\nif (isNaN(baseTime.getTime())) {\n    node.warn(\"❌ Invalid base time: \" + msg.payload.time);\n    return null;\n}\n\n// --- Step 5: Convert to IST using Intl.DateTimeFormat\nconst istParts = Object.fromEntries(\n    new Intl.DateTimeFormat('en-GB', {\n        timeZone: 'Asia/Kolkata',\n        year: 'numeric', month: '2-digit', day: '2-digit',\n        hour: '2-digit', minute: '2-digit', second: '2-digit',\n        hour12: false\n    }).formatToParts(baseTime).map(p => [p.type, p.value])\n);\n\nconst hoursIST = Number(istParts.hour);\nconst minutesIST = Number(istParts.minute);\n\n// --- Step 6: Determine Shift\nlet shift;\nif (hoursIST >= 7 && (hoursIST < 15 || (hoursIST === 15 && minutesIST < 30))) {\n    shift = \"A\";  // 07:00 - 15:29\n} else if ((hoursIST === 15 && minutesIST >= 30) || (hoursIST > 15 && hoursIST <= 23)) {\n    shift = \"B\";  // 15:30 - 23:59\n} else {\n    shift = \"C\";  // 00:00 - 06:59\n}\n\n// --- Step 7: Format IST as \"YYYY-MM-DD HH:mm:ss.SSS\"\nconst milliseconds = String(baseTime.getMilliseconds()).padStart(3, '0');\nconst istFormatted = `${istParts.year}-${istParts.month}-${istParts.day} ${istParts.hour}:${istParts.minute}:${istParts.second}.${milliseconds}`;\n\n// --- Step 8: Final Payload\nmsg.payload = {\n    companyId: \"JBMGroup\",\n    plantId: \"1731\",\n    machineId: \"Front_floor_new\",\n    lineId: lineId,\n    part_name: \"ASSY_FRONT_UNDERBODY_FRAME\",\n    shift: shift,\n    variant: variant,\n    time: istFormatted,  // IST formatted timestamp\n    totalStrokeCounter: production\n};\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1010,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0a853cddd705cfe7",
+        "type": "function",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "function 29",
+        "func": "let variant;\nlet production;\nlet lineId;\n\n// --- Step 1: Extract input flags safely\nconst l81 = msg.payload?.[\"L81\"];\nconst l82 = msg.payload?.[\"L82\"];\n\n// --- Step 2: Match conditions for variant, line, and production\nif (l81 === true && l82 === false) {\n    variant = \"ICE\";\n    production = Number(msg.payload[\"D5346\"]);\n    lineId = \"UNDER_BODY_OP_60_LH\";\n} else if (l82 === true && l81 === false) {\n    variant = \"EV\";\n    production = Number(msg.payload[\"D6346\"]);\n    lineId = \"UNDER_BODY_OP_60_LH\";\n} else {\n    node.warn(\"❌ No valid variant condition matched. L81: \" + l81 + \", L82: \" + l82);\n    return null;\n}\n\n// --- Step 3: Validate production number\nif (!Number.isFinite(production)) {\n    node.warn(\"❌ Invalid production value: \" + production);\n    return null;\n}\n\n// --- Step 4: Get base UTC time\nconst baseTime = msg.payload.time ? new Date(msg.payload.time) : new Date();\nif (isNaN(baseTime.getTime())) {\n    node.warn(\"❌ Invalid base time: \" + msg.payload.time);\n    return null;\n}\n\n// --- Step 5: Convert to IST using Intl.DateTimeFormat\nconst istParts = Object.fromEntries(\n    new Intl.DateTimeFormat('en-GB', {\n        timeZone: 'Asia/Kolkata',\n        year: 'numeric', month: '2-digit', day: '2-digit',\n        hour: '2-digit', minute: '2-digit', second: '2-digit',\n        hour12: false\n    }).formatToParts(baseTime).map(p => [p.type, p.value])\n);\n\nconst hoursIST = Number(istParts.hour);\nconst minutesIST = Number(istParts.minute);\n\n// --- Step 6: Determine Shift\nlet shift;\nif (hoursIST >= 7 && (hoursIST < 15 || (hoursIST === 15 && minutesIST < 30))) {\n    shift = \"A\";  // 07:00 - 15:29\n} else if ((hoursIST === 15 && minutesIST >= 30) || (hoursIST > 15 && hoursIST <= 23)) {\n    shift = \"B\";  // 15:30 - 23:59\n} else {\n    shift = \"C\";  // 00:00 - 06:59\n}\n\n// --- Step 7: Handle shift-based baseline for counter\nlet lastShift = flow.get(\"lastShift\") || null;\nlet shiftBaseline = flow.get(\"shiftBaseline\") || 0;\n\n// if shift has changed → reset baseline\nif (shift !== lastShift) {\n    shiftBaseline = production;\n    flow.set(\"shiftBaseline\", shiftBaseline);\n    flow.set(\"lastShift\", shift);\n}\n\n// calculate shift-local counter\nlet shiftCounter = production - shiftBaseline;\nif (shiftCounter < 0) shiftCounter = 0; // safety in case PLC resets\n\n// --- Step 8: Format IST as \"YYYY-MM-DD HH:mm:ss.SSS\"\nconst milliseconds = String(baseTime.getMilliseconds()).padStart(3, '0');\nconst istFormatted = `${istParts.year}-${istParts.month}-${istParts.day} ${istParts.hour}:${istParts.minute}:${istParts.second}.${milliseconds}`;\n\n// --- Step 9: Final Payload\nmsg.payload = {\n    companyId: \"JBMGroup\",\n    plantId: \"1731\",\n    machineId: \"Front_floor_new\",\n    lineId: lineId,\n    part_name: \"ASSY_FRONT_UNDERBODY_FRAME\",\n    shift: shift,\n    variant: variant,\n    time: istFormatted,  // IST formatted timestamp\n    totalStrokeCounter: shiftCounter   // <-- now reset every shift\n};\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 870,
+        "y": 340,
+        "wires": [
+            [
+                "5c123ac3afd85a5b",
+                "36bbc25d0fd01704"
+            ]
+        ]
+    },
+    {
+        "id": "5c123ac3afd85a5b",
+        "type": "debug",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "debug 7",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1180,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "36bbc25d0fd01704",
+        "type": "function",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "shift_summary",
+        "func": "const payload = msg.payload;\n\n// Validate required fields\nif (!payload || !payload.plantId || !payload.machineId || !payload.lineId || !payload.variant) {\n    node.warn(\"Missing or invalid fields in payload\");\n    return null;\n}\n\n// Prepare SQL INSERT query\nmsg.query = `\nINSERT INTO shift_summary (\n    plant_id, machine_id, line_id, variant\n) VALUES (\n    '${payload.plantId}',\n    '${payload.machineId}',\n    '${payload.lineId}',\n    '${payload.variant}'\n);\n`;\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 200,
+        "wires": [
+            [
+                "14418e6803046c3e",
+                "3fc46a24fdecd8df"
+            ]
+        ]
+    },
+    {
+        "id": "dab3b68db9045eaa",
+        "type": "postgresql",
+        "z": "b8fda6f6b4bd90a2",
+        "name": "",
+        "query": "SELECT * FROM ;",
+        "postgreSQLConfig": "49dbe9a2039b7e1a",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 1450,
+        "y": 260,
+        "wires": [
+            [
+                "3c76146e380bed15"
+            ]
+        ]
+    },
+    {
+        "id": "15e1a4947a7c4637",
+        "type": "MC Protocol Connection",
+        "name": "UNDER_BODY",
+        "host": "192.168.3.1",
+        "port": "1025",
+        "protocol": "TCP",
+        "frame": "3E",
+        "plcType": "Q",
+        "ascii": false,
+        "PLCStation": "",
+        "PCStation": "",
+        "PLCModuleNo": "",
+        "network": "",
+        "octalInputOutput": false,
+        "timeout": 1000
+    },
+    {
+        "id": "49dbe9a2039b7e1a",
+        "type": "postgreSQLConfig",
+        "name": "under_body",
+        "host": "127.0.0.1",
+        "hostFieldType": "str",
+        "port": 5432,
+        "portFieldType": "num",
+        "database": "andon",
+        "databaseFieldType": "str",
+        "ssl": "false",
+        "sslFieldType": "bool",
+        "applicationName": "",
+        "applicationNameType": "str",
+        "max": 10,
+        "maxFieldType": "num",
+        "idle": 1000,
+        "idleFieldType": "num",
+        "connectionTimeout": 10000,
+        "connectionTimeoutFieldType": "num",
+        "user": "thirdeyeai",
+        "userFieldType": "str",
+        "password": "iot@1234",
+        "passwordFieldType": "str"
+    }
+]

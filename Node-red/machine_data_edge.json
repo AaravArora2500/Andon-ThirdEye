@@ -1,0 +1,960 @@
+[
+    {
+        "id": "205d63fb9d226447",
+        "type": "tab",
+        "label": "Flow 4",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "4deb63153ef1c8ee",
+        "type": "debug",
+        "z": "205d63fb9d226447",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1580,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "7d49ce6000cbc813",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "Storing_to_db",
+        "func": "msg.query = `\nINSERT INTO shift_summary (\n  plant_id, line_id, machine_id, summary_date,\n  shift_code, variant, production_quantity,\n  target_quantity, last_counter, updated_on,\n  active, uom, production_rate, actual_run_time,\n  planned_production_time\n) VALUES (\n  $1, $2, $3, $4,\n  $5, $6, $7,\n  $8, $9, $10,\n  $11, $12, $13, $14, $15\n);\n`;\n\nmsg.params = [\n  msg.payload.plant_id ?? null,\n  msg.payload.line_id ?? null,\n  msg.payload.machine_id ?? null,\n  msg.payload.summary_date ?? null,\n  msg.payload.shift_code ?? null,\n  msg.payload.variant ?? null,\n  msg.payload.production_quantity ?? null,\n  msg.payload.target_quantity ?? null, \n  msg.payload.last_counter ?? null,\n  msg.payload.updated_on ?? null,\n  msg.payload.active ?? null,\n  msg.payload.uom ?? null,\n  msg.payload.production_rate ?? null,\n  msg.payload.actual_run_time ?? null,\n  msg.payload.planned_production_time ?? null\n];\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1160,
+        "y": 380,
+        "wires": [
+            [
+                "4d3b5f8d79d58731"
+            ]
+        ]
+    },
+    {
+        "id": "292476506cd8a4ec",
+        "type": "inject",
+        "z": "205d63fb9d226447",
+        "name": "FAGOR_A_1022",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "iso",
+        "payloadType": "date",
+        "x": 580,
+        "y": 380,
+        "wires": [
+            [
+                "d0eeda8241238272"
+            ]
+        ]
+    },
+    {
+        "id": "d0eeda8241238272",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "count",
+        "func": "const plant_id = \"1022\";\nconst line_id = \"FAGOR\";\nconst machine_id = \"1\";\nconst variant = \"FAGOR\";\nconst shift_code = \"A_1022\";\n\n\n\nlet count = flow.get(\"count\") || 0;\ncount += 1;\nflow.set(\"count\", count);\n\nconst now = new Date();\nconst safeVariant = variant.replace(/[^a-zA-Z0-9_]/g, \"_\");\nconst key = `${plant_id}_${line_id}_${machine_id}_${safeVariant}`;\n\nconst prevIncrement = flow.get(`lastIncrement_${key}`);\nflow.set(`lastIncrement_${key}`, now);\n\nlet production_rate = 0;\nlet elapsedSec = 0;\n\nif (prevIncrement) {\n  const prev = new Date(prevIncrement);\n  elapsedSec = (now - prev) / 1000;\n  if (elapsedSec > 0) {\n    production_rate = Math.round(60 / elapsedSec); // strokes/min\n  }\n}\n\n// Accumulate run time only when machine is producing\nlet actual_run_time = flow.get(`runTime_${key}`) || 0;\nif (production_rate > 0 && elapsedSec > 0) {\n  actual_run_time += elapsedSec;\n}\nflow.set(`runTime_${key}`, actual_run_time);\n\nconst planned_production_time = 8 * 60 * 60; // 8 hours in seconds\n\nmsg.payload = {\n  plant_id,\n  line_id,\n  machine_id,\n  summary_date: now.toISOString().split(\"T\")[0],\n  shift_code,\n  variant,\n  production_quantity: count,\n  last_counter: count,\n  updated_on: now.toISOString(),\n  active: true,\n  production_rate,\n  actual_run_time: Math.floor(actual_run_time),\n  planned_production_time,\n\n};\n\nnode.warn(\n  `Production Rate: ${production_rate} strokes/min, Run Time: ${actual_run_time}s`\n);\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 2,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 770,
+        "y": 380,
+        "wires": [
+            [
+                "7d49ce6000cbc813",
+                "0b739718c4f29de0"
+            ]
+        ]
+    },
+    {
+        "id": "0b739718c4f29de0",
+        "type": "http request",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "http://localhost:3000/api/machine/event",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1210,
+        "y": 280,
+        "wires": [
+            [
+                "7a5e71a503fd5c46"
+            ]
+        ]
+    },
+    {
+        "id": "aa52d3acd4e8b1be",
+        "type": "debug",
+        "z": "205d63fb9d226447",
+        "name": "debug 6",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1550,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "a8730de8ce0778de",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "Storing_to_db",
+        "func": "msg.query = `\nINSERT INTO shift_summary (\n  plant_id, line_id, machine_id, summary_date,\n  shift_code, variant, production_quantity,\n  target_quantity, last_counter, updated_on,\n  active, uom, production_rate, actual_run_time,\n  planned_production_time\n) VALUES (\n  $1, $2, $3, $4,\n  $5, $6, $7,\n  $8, $9, $10,\n  $11, $12, $13, $14, $15\n);\n`;\n\nmsg.params = [\n  msg.payload.plant_id ?? null,\n  msg.payload.line_id ?? null,\n  msg.payload.machine_id ?? null,\n  msg.payload.summary_date ?? null,\n  msg.payload.shift_code ?? null,\n  msg.payload.variant ?? null,\n  msg.payload.production_quantity ?? null,\n  msg.payload.target_quantity ?? null,\n  msg.payload.last_counter ?? null,\n  msg.payload.updated_on ?? null,\n  msg.payload.active ?? null,\n  msg.payload.uom ?? null,\n  msg.payload.production_rate ?? null,\n  msg.payload.actual_run_time ?? null,\n  msg.payload.planned_production_time ?? null\n];\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1120,
+        "y": 840,
+        "wires": [
+            [
+                "67b6810a83abe925"
+            ]
+        ]
+    },
+    {
+        "id": "747959d08dc8f2f5",
+        "type": "inject",
+        "z": "205d63fb9d226447",
+        "name": "HITACHI_B_1022",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "iso",
+        "payloadType": "date",
+        "x": 550,
+        "y": 840,
+        "wires": [
+            [
+                "0aa84feadb4801b2"
+            ]
+        ]
+    },
+    {
+        "id": "0aa84feadb4801b2",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "count",
+        "func": "const plant_id = \"1022\";\nconst line_id = \"HITACHI\";\nconst machine_id = \"2\";\nconst variant = \"ISGEC-4 FRONT\";\nconst shift_code = \"B_1022\";\n\nlet count = flow.get(\"count\") || 0;\ncount += 1;\nflow.set(\"count\", count);\n\nconst now = new Date();\nconst safeVariant = variant.replace(/[^a-zA-Z0-9_]/g, \"_\");\nconst key = `${plant_id}_${line_id}_${machine_id}_${safeVariant}`;\n\nconst prevIncrement = flow.get(`lastIncrement_${key}`);\nflow.set(`lastIncrement_${key}`, now);\n\nlet production_rate = 0;\nlet elapsedSec = 0;\n\nif (prevIncrement) {\n  const prev = new Date(prevIncrement);\n  elapsedSec = (now - prev) / 1000;\n  if (elapsedSec > 0) {\n    production_rate = Math.round(60 / elapsedSec); // strokes/min\n  }\n}\n\n// Accumulate run time only when machine is producing\nlet actual_run_time = flow.get(`runTime_${key}`) || 0;\nif (production_rate > 0 && elapsedSec > 0) {\n  actual_run_time += elapsedSec;\n}\nflow.set(`runTime_${key}`, actual_run_time);\n\nconst planned_production_time = 8 * 60 * 60; // 8 hours in seconds\n\nmsg.payload = {\n  plant_id,\n  line_id,\n  machine_id,\n  summary_date: now.toISOString().split(\"T\")[0],\n  shift_code,\n  variant,\n  production_quantity: count,\n  last_counter: count,\n  updated_on: now.toISOString(),\n  active: true,\n  production_rate,\n  actual_run_time: Math.floor(actual_run_time),\n  planned_production_time,\n\n};\n\nnode.warn(\n  `Production Rate: ${production_rate} strokes/min, Run Time: ${actual_run_time}s`\n);\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 2,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 840,
+        "wires": [
+            [
+                "a8730de8ce0778de",
+                "f434ee53ded97598"
+            ]
+        ]
+    },
+    {
+        "id": "f434ee53ded97598",
+        "type": "http request",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "method": "POST",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "http://localhost:3000/api/machine/event",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1130,
+        "y": 760,
+        "wires": [
+            [
+                "7a5e71a503fd5c46"
+            ]
+        ]
+    },
+    {
+        "id": "e8ababcc0db84891",
+        "type": "debug",
+        "z": "205d63fb9d226447",
+        "name": "debug 1",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 2680,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "6ded2fd09500b2d6",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "function 1",
+        "func": "msg.query = `\n  INSERT INTO production_datacell5 \n    (line_id, part_name, shift, operation, variant, timestamp, production)\n  VALUES ($1, $2, $3, $4, $5, $6, $7)\n`;\n\nmsg.params = [\n  msg.payload.lineId,\n  msg.payload.Part_Name,\n  msg.payload.shift,\n  msg.payload.op,\n  msg.payload.variant,\n  msg.payload.timestamp,\n  msg.payload.production\n];\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 3040,
+        "y": 460,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "fb5ecd4dfc8bb302",
+        "type": "delay",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "8",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "8",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 2900,
+        "y": 360,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "2e4eeba816c89ae0",
+        "type": "delay",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "8",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "8",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 2900,
+        "y": 360,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "e512f1500cf8f67a",
+        "type": "delay",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "8",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "8",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 2900,
+        "y": 200,
+        "wires": [
+            [
+                "6ded2fd09500b2d6"
+            ]
+        ]
+    },
+    {
+        "id": "0ee44b4e3fa3b4d9",
+        "type": "delay",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "8",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "8",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 2900,
+        "y": 240,
+        "wires": [
+            [
+                "6ded2fd09500b2d6"
+            ]
+        ]
+    },
+    {
+        "id": "2a88f1f719cc7dc3",
+        "type": "delay",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "8",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "8",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 2900,
+        "y": 280,
+        "wires": [
+            [
+                "6ded2fd09500b2d6"
+            ]
+        ]
+    },
+    {
+        "id": "d955db8cd1867691",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "CELL_5_A_PILLAR_INNER_RH_Shift_B_ICE",
+        "func": "let totalStrokes = Number(msg.payload[\"D5392\"]);\nif (isNaN(totalStrokes)) {\n    node.warn(\"Invalid totalStrokes: \" + totalStrokes);\n    return null;\n}\n\nmsg.payload = {\n    lineId: \"CELL_5\",\n    Part_Name: \"A_PILLAR_INNER_RH\",\n    shift: \"B\",\n    op:\"10\",\n    variant: \"ICE\",\n    timestamp: new Date().toISOString(),\n    production: totalStrokes\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2560,
+        "y": 220,
+        "wires": [
+            [
+                "fb5ecd4dfc8bb302"
+            ]
+        ]
+    },
+    {
+        "id": "558c966f82b917ed",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "CELL_5_A_PILLAR_INNER_RH_Shift_C_ICE",
+        "func": "let totalStrokes = Number(msg.payload[\"D5394\"]);\nif (isNaN(totalStrokes)) {\n    node.warn(\"Invalid totalStrokes: \" + totalStrokes);\n    return null;\n}\n\nmsg.payload = {\n    lineId: \"CELL_5\",\n    Part_Name: \"A_PILLAR_INNER_RH\",\n    shift: \"C\",\n    op:\"10\",\n    variant: \"ICE\",\n    timestamp: new Date().toISOString(),\n    production: totalStrokes\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2560,
+        "y": 320,
+        "wires": [
+            [
+                "2e4eeba816c89ae0"
+            ]
+        ]
+    },
+    {
+        "id": "8c7b51969d1a2216",
+        "type": "debug",
+        "z": "205d63fb9d226447",
+        "name": "debug 4",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 2480,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "137c9952e158adab",
+        "type": "inject",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 2010,
+        "y": 240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0617338b1e23c3d3",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "A _PILLAR_INNER_RH_SHIFT_A_PARANOMIC",
+        "func": "let totalStrokes = Number(msg.payload[\"D5490\"]);\nif (isNaN(totalStrokes)) {\n    node.warn(\"Invalid totalStrokes: \" + totalStrokes);\n    return null;\n}\n\nmsg.payload = {\n    lineId: \"CELL_5\",\n    Part_Name: \"A_PILLAR_INNER_RH\",\n    shift: \"A\",\n    op:\"10\",\n    variant: \"PARANOMIC_(55U20)\",\n    timestamp: new Date().toISOString(),\n    production: totalStrokes\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2570,
+        "y": 340,
+        "wires": [
+            [
+                "e512f1500cf8f67a"
+            ]
+        ]
+    },
+    {
+        "id": "83e2a5c8a5a98756",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "A _PILLAR_INNER_RH_SHIFT_A_PARANOMIC",
+        "func": "let totalStrokes = Number(msg.payload[\"D5492\"]);\nif (isNaN(totalStrokes)) {\n    node.warn(\"Invalid totalStrokes: \" + totalStrokes);\n    return null;\n}\n\nmsg.payload = {\n    lineId: \"CELL_5\",\n    Part_Name: \"A_PILLAR_INNER_RH\",\n    shift: \"B\",\n    op:\"10\",\n    variant: \"PARANOMIC_(55U20)\",\n    timestamp: new Date().toISOString(),\n    production: totalStrokes\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2550,
+        "y": 360,
+        "wires": [
+            [
+                "0ee44b4e3fa3b4d9"
+            ]
+        ]
+    },
+    {
+        "id": "321a8b8321cc83f8",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "A _PILLAR_INNER_RH_SHIFT_A_PARANOMIC",
+        "func": "let totalStrokes = Number(msg.payload[\"D5494\"]);\nif (isNaN(totalStrokes)) {\n    node.warn(\"Invalid totalStrokes: \" + totalStrokes);\n    return null;\n}\n\nmsg.payload = {\n    lineId: \"CELL_5\",\n    Part_Name: \"A_PILLAR_INNER_RH\",\n    shift: \"C\",\n    op:\"10\",\n    variant: \"PARANOMIC_(55U20)\",\n    timestamp: new Date().toISOString(),\n    production: totalStrokes\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2570,
+        "y": 280,
+        "wires": [
+            [
+                "2a88f1f719cc7dc3"
+            ]
+        ]
+    },
+    {
+        "id": "f53ce880fee86cd8",
+        "type": "inject",
+        "z": "205d63fb9d226447",
+        "name": "Add Counter",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 2040,
+        "y": 260,
+        "wires": [
+            [
+                "9df975a454c66cc3"
+            ]
+        ]
+    },
+    {
+        "id": "9df975a454c66cc3",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "count",
+        "func": "\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 2230,
+        "y": 220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "30c48fbcb6b901f1",
+        "type": "inject",
+        "z": "205d63fb9d226447",
+        "name": "downtime check HITACHI_B_1022",
+        "props": [],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "x": 460,
+        "y": 540,
+        "wires": [
+            [
+                "18caa07c766c0da0"
+            ]
+        ]
+    },
+    {
+        "id": "18caa07c766c0da0",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "Downtime Check",
+        "func": "const threshold = 5; // seconds\n\nconst plant_id = \"1022\";\nconst line_id = \"HITACHI\";\nconst machine_id = \"2\";\nconst variant = \"ISGEC-4 FRONT\";\nconst shift_code = \"B_1022\";\nconst tag_id = \"other\";\n\n// Sanitize variant for use as a key (safe for storing in flow variables)\nconst safeVariant = variant.replace(/[^a-zA-Z0-9_]/g, \"_\");\nconst key = `${plant_id}_${line_id}_${machine_id}_${safeVariant}`;\nconst now = new Date();\n\nconst lastIncrementKey = `lastIncrement_${key}`;\nconst inDowntimeKey = `inDowntime_${key}`;\nconst downtimeStartKey = `downtimeStart_${key}`; // will store the start time of downtime\n\nconst last = flow.get(lastIncrementKey);\nconst inDowntime = flow.get(inDowntimeKey) || false;\n\nif (!last) {\n    return null; // no previous increment, nothing to process\n}\n\nconst lastTime = new Date(last);\nconst elapsed = (now - lastTime) / 1000;\n\nif (elapsed >= threshold && !inDowntime) {\n    // Downtime starts\n    const start_time = now.toISOString();\n    flow.set(inDowntimeKey, true);\n    flow.set(downtimeStartKey, start_time); // save the start time so we can use it later\n\n    msg.payload = {\n        event: \"downtime_start\",\n        start_time,            // record when downtime started\n        end_time: null,        // no end yet\n        plant_id,\n        line_id,\n        variant,\n        machine_id,\n        shift_code,\n        tag_id\n    };\n\n    node.log(`Downtime Detected for ${key}`);\n    return msg;\n\n} else if (elapsed < threshold && inDowntime) {\n    // Downtime ends\n    const start_time = flow.get(downtimeStartKey); // retrieve the original start time\n    flow.set(inDowntimeKey, false);\n    flow.set(downtimeStartKey, null); // clear stored start time\n\n    msg.payload = {\n        event: \"downtime_end\",\n        start_time,             // include start_time so backend can match record\n        end_time: now.toISOString(),\n        plant_id,\n        line_id,\n        variant,\n        machine_id,\n        shift_code,\n        tag_id\n    };\n\n    node.log(`Machine has resumed for ${key}`);\n    return msg;\n}\n\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 540,
+        "wires": [
+            [
+                "ed2632c17995c607",
+                "523309a6cdb571c8"
+            ]
+        ]
+    },
+    {
+        "id": "ed2632c17995c607",
+        "type": "switch",
+        "z": "205d63fb9d226447",
+        "name": "Start or End?",
+        "property": "payload.event",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "downtime_start",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "downtime_end",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 950,
+        "y": 540,
+        "wires": [
+            [
+                "902db4e18d570c7d"
+            ],
+            [
+                "79a952f38052de14"
+            ]
+        ]
+    },
+    {
+        "id": "e48f7a0cb8c05979",
+        "type": "debug",
+        "z": "205d63fb9d226447",
+        "name": "Debug SQL Result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1610,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "523309a6cdb571c8",
+        "type": "debug",
+        "z": "205d63fb9d226447",
+        "name": "debug 8",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 860,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "bde274c7abf9a005",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "Downtime Check",
+        "func": "const threshold = 5; // seconds\n\nconst plant_id = \"1022\";\nconst line_id = \"FAGOR\";\nconst machine_id = \"1\";\nconst variant = \"FAGOR\";\nconst shift_code = \"A_1022\";\nconst tag_id = \"other\";\n\n// Sanitize variant for use as a key (safe for storing in flow variables)\nconst safeVariant = variant.replace(/[^a-zA-Z0-9_]/g, \"_\");\nconst key = `${plant_id}_${line_id}_${machine_id}_${safeVariant}`;\nconst now = new Date();\n\nconst lastIncrementKey = `lastIncrement_${key}`;\nconst inDowntimeKey = `inDowntime_${key}`;\nconst downtimeStartKey = `downtimeStart_${key}`; // will store the start time of downtime\n\nconst last = flow.get(lastIncrementKey);\nconst inDowntime = flow.get(inDowntimeKey) || false;\n\nif (!last) {\n    return null; // no previous increment, nothing to process\n}\n\nconst lastTime = new Date(last);\nconst elapsed = (now - lastTime) / 1000;\n\nif (elapsed >= threshold && !inDowntime) {\n    // Downtime starts\n    const start_time = now.toISOString();\n    flow.set(inDowntimeKey, true);\n    flow.set(downtimeStartKey, start_time); // save the start time so we can use it later\n\n    msg.payload = {\n        event: \"downtime_start\",\n        start_time,            // record when downtime started\n        end_time: null,        // no end yet\n        plant_id,\n        line_id,\n        variant,\n        machine_id,\n        shift_code,\n        tag_id\n    };\n\n    node.log(`Downtime Detected for ${key}`);\n    return msg;\n\n} else if (elapsed < threshold && inDowntime) {\n    // Downtime ends\n    const start_time = flow.get(downtimeStartKey); // retrieve the original start time\n    flow.set(inDowntimeKey, false);\n    flow.set(downtimeStartKey, null); // clear stored start time\n\n    msg.payload = {\n        event: \"downtime_end\",\n        start_time,             // include start_time so backend can match record\n        end_time: now.toISOString(),\n        plant_id,\n        line_id,\n        variant,\n        machine_id,\n        shift_code,\n        tag_id\n    };\n\n    node.log(`Machine has resumed for ${key}`);\n    return msg;\n}\n\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 2,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 160,
+        "wires": [
+            [
+                "d670a972019765e3",
+                "c7b194eb853522e2"
+            ]
+        ]
+    },
+    {
+        "id": "bd9afc2389bbb45e",
+        "type": "debug",
+        "z": "205d63fb9d226447",
+        "name": "Debug SQL Result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1610,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "d670a972019765e3",
+        "type": "debug",
+        "z": "205d63fb9d226447",
+        "name": "debug 5",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 870,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "82ef249e8a60e14a",
+        "type": "inject",
+        "z": "205d63fb9d226447",
+        "name": "downtime check FAGOR_A_1022",
+        "props": [],
+        "repeat": "5",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "x": 440,
+        "y": 160,
+        "wires": [
+            [
+                "bde274c7abf9a005"
+            ]
+        ]
+    },
+    {
+        "id": "7a5e71a503fd5c46",
+        "type": "debug",
+        "z": "205d63fb9d226447",
+        "name": "Debug",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1780,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "04cf826e164aafb2",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "Update Downtime End SQL",
+        "func": "msg.query = `\n  UPDATE downtime\n  SET end_time = $1\n  WHERE id = (\n    SELECT id FROM downtime\n    WHERE plant_id = $2 AND line_id = $3 AND machine_id = $4 \n      AND shift_code = $5 AND variant = $6 AND end_time IS NULL\n    ORDER BY start_time DESC\n    LIMIT 1\n  )\n  RETURNING *;\n`;\n\nmsg.params = [\n  msg.payload.end_time,     // $1\n  msg.payload.plant_id,     // $2\n  msg.payload.line_id,      // $3\n  msg.payload.machine_id,   // $4\n  msg.payload.shift_code,   // $5 (corrected)\n  msg.payload.variant       // $6 (corrected)\n];\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1190,
+        "y": 200,
+        "wires": [
+            [
+                "354959219923a02a"
+            ]
+        ]
+    },
+    {
+        "id": "79a952f38052de14",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "Update Downtime End SQL",
+        "func": "msg.query = `\n  UPDATE downtime\n  SET end_time = $1\n  WHERE id = (\n    SELECT id FROM downtime\n    WHERE plant_id = $2 AND line_id = $3 AND machine_id = $4 \n      AND shift_code = $5 AND variant = $6 AND end_time IS NULL\n    ORDER BY start_time DESC\n    LIMIT 1\n  )\n  RETURNING *;\n`;\n\nmsg.params = [\n  msg.payload.end_time,     // $1\n  msg.payload.plant_id,     // $2\n  msg.payload.line_id,      // $3\n  msg.payload.machine_id,   // $4\n  msg.payload.shift_code,   // $5 (corrected)\n  msg.payload.variant       // $6 (corrected)\n];\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1190,
+        "y": 580,
+        "wires": [
+            [
+                "bf1f638e8c70089f"
+            ]
+        ]
+    },
+    {
+        "id": "902db4e18d570c7d",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "Insert Downtime SQL",
+        "func": "msg.query = `\n  INSERT INTO downtime (\n    plant_id, line_id, machine_id, shift_code,\n    start_time,end_time,variant,tag_id\n  ) VALUES ($1, $2, $3, $4, $5, $6,$7,$8);\n`;\n\nmsg.params = [\n  msg.payload.plant_id,\n  msg.payload.line_id,\n  msg.payload.machine_id,\n  msg.payload.shift_code,\n  msg.payload.start_time,\n  msg.payload.end_time,\n  msg.payload.variant,\n  msg.payload.tag_id\n];\nnode.log(\"Data added to db successfully\");\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1180,
+        "y": 520,
+        "wires": [
+            [
+                "bf1f638e8c70089f"
+            ]
+        ]
+    },
+    {
+        "id": "bf14fe458bbc9230",
+        "type": "function",
+        "z": "205d63fb9d226447",
+        "name": "Insert Downtime SQL",
+        "func": "msg.query = `\n  INSERT INTO downtime (\n    plant_id, line_id, machine_id, shift_code,\n    start_time,end_time,variant,tag_id\n  ) VALUES ($1, $2, $3, $4, $5, $6,$7,$8);\n`;\n\nmsg.params = [\n  msg.payload.plant_id,\n  msg.payload.line_id,\n  msg.payload.machine_id,\n  msg.payload.shift_code,\n  msg.payload.start_time,\n  msg.payload.end_time,\n  msg.payload.variant,\n  msg.payload.tag_id\n];\nnode.log(\"Data added to db successfully\");\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1180,
+        "y": 120,
+        "wires": [
+            [
+                "354959219923a02a"
+            ]
+        ]
+    },
+    {
+        "id": "c7b194eb853522e2",
+        "type": "switch",
+        "z": "205d63fb9d226447",
+        "name": "Start or End?",
+        "property": "payload.event",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "downtime_start",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "downtime_end",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 950,
+        "y": 180,
+        "wires": [
+            [
+                "bf14fe458bbc9230"
+            ],
+            [
+                "04cf826e164aafb2"
+            ]
+        ]
+    },
+    {
+        "id": "354959219923a02a",
+        "type": "postgresql",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "query": "SELECT * FROM ;",
+        "postgreSQLConfig": "",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 1410,
+        "y": 160,
+        "wires": [
+            [
+                "bd9afc2389bbb45e"
+            ]
+        ]
+    },
+    {
+        "id": "4d3b5f8d79d58731",
+        "type": "postgresql",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "query": "SELECT * FROM ;",
+        "postgreSQLConfig": "",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 1390,
+        "y": 380,
+        "wires": [
+            [
+                "4deb63153ef1c8ee"
+            ]
+        ]
+    },
+    {
+        "id": "bf1f638e8c70089f",
+        "type": "postgresql",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "query": "SELECT * FROM ;",
+        "postgreSQLConfig": "",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 1430,
+        "y": 540,
+        "wires": [
+            [
+                "e48f7a0cb8c05979"
+            ]
+        ]
+    },
+    {
+        "id": "67b6810a83abe925",
+        "type": "postgresql",
+        "z": "205d63fb9d226447",
+        "name": "",
+        "query": "SELECT * FROM ;",
+        "postgreSQLConfig": "",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 1310,
+        "y": 840,
+        "wires": [
+            [
+                "aa52d3acd4e8b1be"
+            ]
+        ]
+    }
+]
