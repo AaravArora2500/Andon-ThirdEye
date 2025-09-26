@@ -1,0 +1,19 @@
+.filter-modal .react-select__control {
+  min-height: 38px;
+  border-radius: 4px;
+  border-color: #d1d5db;
+  box-shadow: none;
+}
+.filter-modal .react-select__menu {
+  z-index: 1100;
+}
+.filter-modal .react-datepicker-wrapper {
+  width: 100%;
+}
+.filter-modal .react-datepicker__input-container input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  font-size: 1rem;
+} 
